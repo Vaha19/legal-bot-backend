@@ -4,11 +4,37 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
 from dotenv import load_dotenv
+from datetime import date
 
 # Завантажуємо ключ з файлу .env
 load_dotenv()
 
 app = FastAPI(title="Юридичний Бот API")
+
+@app.get("/api/news")
+async def get_daily_news():
+    today_str = date.today().strftime("%d липня %Y")
+    
+    # Тут можна збирати новини через RSS/Парсинг або запит до AI
+    news_list = [
+        {
+            "id": 1,
+            "title": "Зміни до Податкового кодексу України",
+            "date": today_str,
+            "tags": ["#TAXES", "#BUSINESS"],
+            "summary_title": "Основні зміни до Податкового кодексу",
+            "description": "Верховна Рада ухвалила закон №4215-IX, який запроваджує оновлення для платників податків з 1 серпня.",
+            "key_points": [
+                "Ставка податку на прибуток для великих підприємств зростає з 18% до 20%",
+                "Спрощена система (3 група) — ставка залишається 5%",
+                "Введено тимчасовий військовий збір 1.5% на доходи ФОП"
+            ],
+            "who_affected": [
+                "Юридичних осіб із оборотом понад 40 млн грн"
+            ]
+        }
+    ]
+    return {"news": news_list}
 
 # Налаштовуємо CORS (щоб фронтенд Lovable міг звертатися до цього сервера)
 app.add_middleware(
@@ -41,19 +67,4 @@ def home():
 
 @app.post("/api/chat")
 async def chat_endpoint(data: UserMessage):
-    try:
-        # Відправляємо запит до моделі LLaMA через Groq
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": data.message}
-            ],
-            temperature=0.2, # Низька температура робить відповіді більш точними і строгими
-        )
-        
-        reply = completion.choices[0].message.content
-        return {"response": reply}
-
-    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
