@@ -86,6 +86,49 @@ async def get_daily_news():
             ]
         }
 
+# 4. Модель для запиту аналізу діяча
+class PersonRequest(BaseModel):
+    name: str
+
+@app.post("/api/analyze-person")
+async def analyze_person(data: PersonRequest):
+    prompt = f"""
+    Ти — незаангажований суспільно-юридичний аналітик.
+    Проаналізуй публічну діяльність, голосування, законопроєкти або висловлювання особи: "{data.name}".
+    
+    Оціни її діяльність за шкалою від 0 до 100 та надай об'єктивний баланс позитивних і негативних фактів.
+    
+    Поверни відповідь СТРOГО у форматі JSON (без додаткового тексту чи ```json):
+    {{
+        "person_name": "{data.name}",
+        "overall_score": 75,
+        "positive_score": 80,
+        "negative_score": 20,
+        "summary": "Короткий загальний висновок про діяльність людини (2-3 речення).",
+        "good_deeds": [
+            "Факт 1: Позитивна дія або корисний законопроєкт",
+            "Факт 2: Публічна позиція чи корисна ініціатива"
+        ],
+        "bad_deeds": [
+            "Факт 1: Зауваження, прогули або суперечливі голосування",
+            "Факт 2: Критика або скандальні епізоди"
+        ]
+    }}
+    """
+    
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+        
+        analysis_data = json.loads(completion.choices[0].message.content)
+        return analysis_data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка аналізу: {str(e)}")
 
 # 2. Модель та інструкція для чату
 class UserMessage(BaseModel):
