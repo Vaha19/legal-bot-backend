@@ -93,7 +93,62 @@ async def get_daily_news():
             ]
         }
     
+# Ендпоінт для найскандальніших/найрезонансніших петицій
+@app.get("/api/petitions")
+async def get_hot_petitions():
+    today_str = get_ukrainian_date()
 
+    prompt = f"""
+    Ти — провідний суспільний та юридичний аналітик України.
+    Твоє завдання: згенерувати список з 3 найскандальніших, найобговорюваніших або найважливіших петицій до Президента України або Верховної Ради за останній час станом на {today_str}.
+
+    Поверни відповідь СТРOГО у формате JSON (без додаткового тексту чи ```json маркерів):
+    {{
+        "petitions": [
+            {{
+                "id": 1,
+                "title": "Заголовок резонансної петиції",
+                "author": "ПІБ Автора або Ініціативна група",
+                "target": "Президенту України",
+                "votes_count": "21,340 / 25,000",
+                "status": "Триває збір підписів",
+                "tags": ["#СКАНДАЛ", "#БЮДЖЕТ", "#РЕФОРМИ"],
+                "essence": "Короткий опис у чому суть петиції та чому вона викликала резонанс.",
+                "arguments_for": "Головний аргумент прибічників",
+                "arguments_against": "Чому виник скандал або в чому контраргументи"
+            }}
+        ]
+    }}
+    """
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5,
+            response_format={"type": "json_object"},
+        )
+
+        petitions_data = json.loads(completion.choices[0].message.content)
+        return petitions_data
+
+    except Exception as e:
+        return {
+            "petitions": [
+                {
+                    "id": 1,
+                    "title": "Моніторинг офіційних петицій",
+                    "author": "Суспільні активісти",
+                    "target": "Офіс Президента",
+                    "votes_count": "25,000 / 25,000",
+                    "status": "На розгляді",
+                    "tags": ["#СУСПІЛЬСТВО"],
+                    "essence": "Триває аналіз та оновлення реєстру актуальних петицій.",
+                    "arguments_for": "Високий суспільний інтерес",
+                    "arguments_against": "Потребує правової оцінки",
+                }
+            ]
+        }
 # 4. Модель для запиту аналізу діяча
 class PersonRequest(BaseModel):
     name: str
