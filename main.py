@@ -13,7 +13,7 @@ load_dotenv()
 
 app = FastAPI(title="Юридичний Бот API")
 
-# Налаштовуємо CORS (щоб фронтенд Lovable міг звертатися до цього сервера)
+# Налаштовуємо CORS (щоб фронтенд Lovable та інші сервіси могли звертатися до API)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Дозволяє запити з будь-яких джерел
@@ -25,18 +25,39 @@ app.add_middleware(
 # Ініціалізуємо клієнта Groq
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-#Щоденний генератор новин
+
+# Допоміжна функція для динамічної дати українською мовою
+def get_ukrainian_date():
+    months = {
+        1: "січня",
+        2: "лютого",
+        3: "березня",
+        4: "квітня",
+        5: "травня",
+        6: "червня",
+        7: "липня",
+        8: "серпня",
+        9: "вересня",
+        10: "жовтня",
+        11: "листопада",
+        12: "грудня",
+    }
+    today = date.today()
+    return f"{today.day} {months[today.month]} {today.year}"
+
+
+# 1. Щоденний генератор новин законодавства
 @app.get("/api/news")
 async def get_daily_news():
-    today_str = date.today().strftime("%d липня %Y")
+    today_str = get_ukrainian_date()
 
-    # Додаємо вибір випадкової сфери, щоб новини змінювалися при оновленні
+    # Додаємо вибір випадкової сфери, щоб новини урізноманітнювалися
     categories = [
         "податки та бізнес (ФОП, мито, збори)",
         "військовий облік, мобілізація та соціальний захист військовослужбовців",
         "соціальні виплати, пенсії та допомога ВПО",
         "автомобільні закони, ПДР та штрафи",
-        "цифровізація, дія та судова система",
+        "цифровізація, Дія та судова система",
     ]
     random_category = random.choice(categories)
 
@@ -46,7 +67,7 @@ async def get_daily_news():
     
     Спеціалізація для цього запиту: {random_category}.
 
-    Поверни відповідь СТРOГО у форматі JSON (без додаткового тексту чи ```json):
+    Поверни відповідь СТРOГО у форматі JSON (без додаткового тексту чи ```json маркерів):
     {{
         "id": 1,
         "title": "Заголовок зміни у сфері: {random_category}",
@@ -70,7 +91,7 @@ async def get_daily_news():
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,  # Збільшено для різноманітності відповідей
+            temperature=0.7,
             response_format={"type": "json_object"},
         )
 
@@ -92,8 +113,9 @@ async def get_daily_news():
                 }
             ]
         }
-    
-# Ендпоінт для найскандальніших/найрезонансніших петицій
+
+
+# 2. Ендпоінт для найскандальніших/найрезонансніших петицій
 @app.get("/api/petitions")
 async def get_hot_petitions():
     today_str = get_ukrainian_date()
@@ -137,21 +159,24 @@ async def get_hot_petitions():
             "petitions": [
                 {
                     "id": 1,
-                    "title": "Моніторинг офіційних петицій",
-                    "author": "Суспільні активісти",
-                    "target": "Офіс Президента",
+                    "title": "Скасування необов'язкових витрат місцевих бюджетів під час війни",
+                    "author": "Ініціативна група громадян",
+                    "target": "Президенту України",
                     "votes_count": "25,000 / 25,000",
                     "status": "На розгляді",
-                    "tags": ["#СУСПІЛЬСТВО"],
-                    "essence": "Триває аналіз та оновлення реєстру актуальних петицій.",
-                    "arguments_for": "Високий суспільний інтерес",
-                    "arguments_against": "Потребує правової оцінки",
+                    "tags": ["#БЮДЖЕТ", "#ЗСУ"],
+                    "essence": "Вимога спрямувати всі вільні кошти обласних та міських бюджетів на закупівлю Дронів та РЕБ для ЗСУ.",
+                    "arguments_for": "Пріоритет національної безпеки та підтримки фронту",
+                    "arguments_against": "Обмеження самоврядування та місцевих інфраструктурних проектів",
                 }
             ]
         }
-# 4. Модель для запиту аналізу діяча
+
+
+# 3. Аналіз публічного діяча/депутата
 class PersonRequest(BaseModel):
     name: str
+
 
 @app.post("/api/analyze-person")
 async def analyze_person(data: PersonRequest):
@@ -161,7 +186,7 @@ async def analyze_person(data: PersonRequest):
     
     Оціни її діяльність за шкалою від 0 до 100 та надай об'єктивний баланс позитивних і негативних фактів.
     
-    Поверни відповідь СТРOГО у форматі JSON (без додаткового тексту чи ```json):
+    Поверни відповідь СТРOГО у форматі JSON (без додаткового тексту чи ```json маркерів):
     {{
         "person_name": "{data.name}",
         "overall_score": 75,
@@ -178,22 +203,25 @@ async def analyze_person(data: PersonRequest):
         ]
     }}
     """
-    
+
     try:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
-        
+
         analysis_data = json.loads(completion.choices[0].message.content)
         return analysis_data
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Помилка аналізу: {str(e)}")
 
-# 2. Модель та інструкція для чату
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Помилка аналізу: {str(e)}"
+        )
+
+
+# 4. Модель та інструкція для Чату
 class UserMessage(BaseModel):
     message: str
 
@@ -212,7 +240,6 @@ def home():
     return {"status": "Сервер працює!"}
 
 
-# 3. Ендпоінт чату
 @app.post("/api/chat")
 async def chat_endpoint(data: UserMessage):
     try:
