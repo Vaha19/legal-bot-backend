@@ -181,34 +181,39 @@ class PersonRequest(BaseModel):
 @app.post("/api/analyze-person")
 async def analyze_person(data: PersonRequest):
     prompt = f"""
-    Ти — незаангажований суспільно-юридичний аналітик України.
-    Проаналізуй публічну діяльність, голосування, законопроєкти або висловлювання особи: "{data.name}".
+    Проаналізуй публічну діяльність, голосування та рішення політика або діяча України: "{data.name}".
     
-    Оціни її діяльність за шкалою від 0 до 100 та надай об'єктивний баланс позитивних і негативних фактів.
-    
-    Поверни відповідь СТРOГО у форматі JSON без додаткового тексту:
+    Надай об'єктивний аналіз у форматі JSON за такою схемою:
+    - overall_score: число від 0 до 100 (загальний рейтинг корисності/надійності).
+    - positive_score: число від 0 до 100 (відсоток позитиву).
+    - negative_score: число від 0 до 100 (відсоток негативу, у сумі з positive_score має бути 100).
+    - summary: стислий опис (2 речення) про постать {data.name}.
+    - good_deeds: масив із 2 конкретних позитивних фактів чи законопроєктів.
+    - bad_deeds: масив із 2 конкретних негативних фактів, критики чи скандалів.
+
+    Формат відповіді (ТІЛЬКИ JSON):
     {{
         "person_name": "{data.name}",
-        "overall_score": 75,
-        "positive_score": 80,
-        "negative_score": 20,
-        "summary": "Короткий загальний висновок про діяльність людини.",
-        "good_deeds": [
-            "Позитивна дія або корисний законопроєкт",
-            "Публічна позиція чи корисна ініціатива"
-        ],
-        "bad_deeds": [
-            "Зауваження, прогули або суперечливі голосування",
-            "Критика або скандальні епізоди"
-        ]
+        "overall_score": 45,
+        "positive_score": 40,
+        "negative_score": 60,
+        "summary": "Конкретний опис особи...",
+        "good_deeds": ["Реальний факт 1", "Реальний факт 2"],
+        "bad_deeds": ["Реальний факт 1", "Реальний факт 2"]
     }}
     """
 
     try:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Ти — незаангажований суспільно-юридичний аналітик. Відповідай виключно в форматі JSON українською мовою.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
             response_format={"type": "json_object"},
         )
 
@@ -216,19 +221,15 @@ async def analyze_person(data: PersonRequest):
         return analysis_data
 
     except Exception as e:
-        # Резервна відповідь замість помилки 500
         return {
             "person_name": data.name,
             "overall_score": 50,
             "positive_score": 50,
             "negative_score": 50,
-            "summary": f"Триває збір та аналіз публічної інформації про діяльність особи {data.name}.",
-            "good_deeds": [
-                "Участь у державотворчій або суспільній діяльності"
-            ],
-            "bad_deeds": ["Наявність резонансних згадок у ЗМІ"],
+            "summary": f"Не вдалося згенерувати детальний аналіз для {data.name}. Спробуйте уточнити ім'я та прізвище.",
+            "good_deeds": ["Публічна діяльність у системі управління"],
+            "bad_deeds": ["Наявність суперечливих епізодів у кар'єрі"],
         }
-
 # 4. Модель та інструкція для Чату
 class UserMessage(BaseModel):
     message: str
