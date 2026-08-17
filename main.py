@@ -24,7 +24,6 @@ app.add_middleware(
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
-# Використовуємо стабільну модель Groq
 MODEL_NAME = "llama-3.1-70b-versatile"
 
 
@@ -60,35 +59,47 @@ async def get_daily_news():
     ]
     random_category = random.choice(categories)
 
+    prompt = f"""
+    You must generate legal news for Ukraine for {today_str} in category "{random_category}".
+    Respond strictly in valid json format without markdown codeblocks or extra text.
+
+    Json structure:
+    {{
+        "id": 1,
+        "title": "Заголовок реальної новини або зміни",
+        "date": "{today_str}",
+        "tags": ["#ЗАКОНИ", "#УКРАЇНА"],
+        "summary_title": "Короткий опис суті змін",
+        "description": "Детальний опис закону чи постанови Кабміну",
+        "key_points": [
+            "Основна суть нововведення",
+            "Що змінюється для громадян та бізнесу",
+            "Дата набрання чинності"
+        ],
+        "who_affected": [
+            "Фізичні особи",
+            "Підприємці"
+        ]
+    }}
+    """
+
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a legal analyst. Respond strictly in valid json format.",
+                    "content": "You are a helpful legal assistant. Always output valid json.",
                 },
-                {
-                    "role": "user",
-                    "content": f"""Згенеруй дайджест про оновлення законодавства України станом на {today_str} у сфері "{random_category}".
-                    
-                    Поверни json об'єкт:
-                    {{
-                        "id": 1,
-                        "title": "Заголовок новини",
-                        "date": "{today_str}",
-                        "tags": ["#ЗАКОНИ", "#УКРАЇНА"],
-                        "summary_title": "Короткий опис",
-                        "description": "Стислий опис закону",
-                        "key_points": ["Теза 1", "Теза 2", "Теза 3"],
-                        "who_affected": ["Категорія 1", "Категорія 2"]
-                    }}""",
-                },
+                {"role": "user", "content": prompt},
             ],
-            temperature=0.5,
+            temperature=0.4,
             response_format={"type": "json_object"},
         )
-        return {"news": [json.loads(completion.choices[0].message.content)]}
+
+        content = completion.choices[0].message.content
+        news_data = json.loads(content)
+        return {"news": [news_data]}
 
     except Exception as e:
         print("ERROR /api/news:", str(e))
@@ -97,13 +108,13 @@ async def get_daily_news():
             "news": [
                 {
                     "id": 1,
-                    "title": f"Дайджест законодавства на {today_str}",
+                    "title": f"Помилка запиту: {str(e)}",
                     "date": today_str,
-                    "tags": ["#ЗАКОНИ", "#УКРАЇНА"],
-                    "summary_title": "Оновлення нормативно-правових актів",
-                    "description": "Моніторинг нових постанов Кабміну та законопроєктів ВРУ.",
-                    "key_points": ["Оновлення баз даних у процесі"],
-                    "who_affected": ["Громадяни України"],
+                    "tags": ["#ПОМИЛКА"],
+                    "summary_title": "Деталі помилки запиту до Groq",
+                    "description": "Перевірте логи хостингу Render.",
+                    "key_points": [str(e)],
+                    "who_affected": ["Розробник"],
                 }
             ]
         }
@@ -114,38 +125,40 @@ async def get_daily_news():
 async def get_hot_petitions():
     today_str = get_ukrainian_date()
 
+    prompt = f"""
+    Generate 3 active or controversial petitions in Ukraine for {today_str}.
+    Respond strictly in valid json format.
+
+    Json structure:
+    {{
+        "petitions": [
+            {{
+                "id": 1,
+                "title": "Заголовок петиції",
+                "author": "Ініціатор",
+                "target": "Президенту України",
+                "votes_count": "21340 / 25000",
+                "status": "Триває збір підписів",
+                "tags": ["#СКАНДАЛ", "#БЮДЖЕТ"],
+                "essence": "Суть петиції",
+                "arguments_for": "Аргумент за",
+                "arguments_against": "Аргумент проти"
+            }}
+        ]
+    }}
+    """
+
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a social analyst. Respond strictly in valid json format.",
+                    "content": "You are a social analyst. Always output valid json.",
                 },
-                {
-                    "role": "user",
-                    "content": f"""Згенеруй 3 резонансні петиції в Україні станом на {today_str}.
-                    
-                    Поверни json об'єкт:
-                    {{
-                        "petitions": [
-                            {{
-                                "id": 1,
-                                "title": "Заголовок петиції",
-                                "author": "ПІБ Автора",
-                                "target": "Президенту України",
-                                "votes_count": "21340 / 25000",
-                                "status": "Триває збір підписів",
-                                "tags": ["#СКАНДАЛ", "#БЮДЖЕТ"],
-                                "essence": "Опис суті петиції",
-                                "arguments_for": "Аргумент за",
-                                "arguments_against": "Аргумент проти"
-                            }}
-                        ]
-                    }}""",
-                },
+                {"role": "user", "content": prompt},
             ],
-            temperature=0.5,
+            temperature=0.4,
             response_format={"type": "json_object"},
         )
         return json.loads(completion.choices[0].message.content)
@@ -157,15 +170,15 @@ async def get_hot_petitions():
             "petitions": [
                 {
                     "id": 1,
-                    "title": "Переспрямування місцевих бюджетів на ЗСУ",
-                    "author": "Ініціативна група",
-                    "target": "Президенту України",
-                    "votes_count": "25000 / 25000",
-                    "status": "На розгляді",
-                    "tags": ["#БЮДЖЕТ", "#ЗСУ"],
-                    "essence": "Вимога спрямувати кошти на закупівлю засобів для ЗСУ.",
-                    "arguments_for": "Підтримка фронту",
-                    "arguments_against": "Обмеження місцевого бюджету",
+                    "title": f"Помилка запиту: {str(e)}",
+                    "author": "Система",
+                    "target": "Адмін",
+                    "votes_count": "0 / 25000",
+                    "status": "Помилка",
+                    "tags": ["#ПОМИЛКА"],
+                    "essence": f"Деталі: {str(e)}",
+                    "arguments_for": "-",
+                    "arguments_against": "-",
                 }
             ]
         }
@@ -178,29 +191,31 @@ class PersonRequest(BaseModel):
 
 @app.post("/api/analyze-person")
 async def analyze_person(data: PersonRequest):
+    prompt = f"""
+    Analyze political or public figure in Ukraine: "{data.name}".
+    Respond strictly in valid json format in Ukrainian.
+
+    Json structure:
+    {{
+        "person_name": "{data.name}",
+        "overall_score": 65,
+        "positive_score": 60,
+        "negative_score": 40,
+        "summary": "Детальний підсумок про діяльність та постать.",
+        "good_deeds": ["Конкретний позитивний факт 1", "Конкретний позитивний факт 2"],
+        "bad_deeds": ["Конкретна критика чи скандал 1", "Конкретна критика чи скандал 2"]
+    }}
+    """
+
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a political analyst. Output strictly valid json in Ukrainian.",
+                    "content": "You are a political analyst. Output strictly valid json.",
                 },
-                {
-                    "role": "user",
-                    "content": f"""Проаналізуй діяча: "{data.name}".
-                    
-                    Поверни json об'єкт:
-                    {{
-                        "person_name": "{data.name}",
-                        "overall_score": 50,
-                        "positive_score": 50,
-                        "negative_score": 50,
-                        "summary": "Короткий опис діяльності (2 речення)",
-                        "good_deeds": ["Конкретна позитивна дія 1", "Конкретна позитивна дія 2"],
-                        "bad_deeds": ["Конкретний негативний факт 1", "Конкретний негативний факт 2"]
-                    }}""",
-                },
+                {"role": "user", "content": prompt},
             ],
             temperature=0.3,
             response_format={"type": "json_object"},
@@ -212,12 +227,12 @@ async def analyze_person(data: PersonRequest):
         traceback.print_exc()
         return {
             "person_name": data.name,
-            "overall_score": 50,
-            "positive_score": 50,
-            "negative_score": 50,
-            "summary": f"Аналіз для {data.name} тимчасово недоступний.",
-            "good_deeds": ["Суспільна діяльність"],
-            "bad_deeds": ["Публічна критика"],
+            "overall_score": 0,
+            "positive_score": 0,
+            "negative_score": 0,
+            "summary": f"Помилка під час аналізу: {str(e)}",
+            "good_deeds": ["Перевірте GROQ_API_KEY"],
+            "bad_deeds": ["Перевірте логи Render"],
         }
 
 
