@@ -27,7 +27,7 @@ client = Groq(
 )
 
 # Актуальна підтримувана модель Groq
-MODEL_NAME = "llama-3.1-8b-instant"
+MODEL_NAME = "mixtral-8x7b-32768"
 
 
 def get_ukrainian_date():
