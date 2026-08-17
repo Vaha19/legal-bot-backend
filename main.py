@@ -26,7 +26,7 @@ client = Groq(
 )
 
 # Актуальна підтримувана модель Groq
-MODEL_NAME = "mixtral-8x7b-32768"
+MODEL_NAME = "openai/gpt-oss-120b"
 
 
 def get_ukrainian_date():
