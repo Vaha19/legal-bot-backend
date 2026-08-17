@@ -24,7 +24,7 @@ app.add_middleware(
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
-MODEL_NAME = "llama-3.1-70b-versatile"
+MODEL_NAME = "llama3-70b-8192"
 
 
 def get_ukrainian_date():
