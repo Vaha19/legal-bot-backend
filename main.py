@@ -24,6 +24,9 @@ app.add_middleware(
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
+# Використовуємо стабільну модель Groq
+MODEL_NAME = "llama-3.1-70b-versatile"
+
 
 def get_ukrainian_date():
     months = {
@@ -59,7 +62,7 @@ async def get_daily_news():
 
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
@@ -113,7 +116,7 @@ async def get_hot_petitions():
 
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
@@ -177,7 +180,7 @@ class PersonRequest(BaseModel):
 async def analyze_person(data: PersonRequest):
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
@@ -232,7 +235,7 @@ def home():
 async def chat_endpoint(data: UserMessage):
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL_NAME,
             messages=[
                 {
                     "role": "system",
