@@ -2,3 +2,6 @@ fastapi
 uvicorn
 groq>=0.11.0
 python-dotenv
+aiogram
+aiohttp
+
